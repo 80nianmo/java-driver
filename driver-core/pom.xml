@@ -200,7 +200,7 @@
                         <_include>-osgi.bnd</_include>
                         <Import-Package>
                             <!-- JNR does not provide OSGi bundles, so exclude it; the driver can live without it -->
-                            <![CDATA[com.google.common*;version="[16.0.1,22)",!jnr.*,*]]></Import-Package>
+                            <![CDATA[com.google.common.*;version="[16.0.1,22)",!jnr.*,*]]></Import-Package>
                     </instructions>
                     <supportedProjectTypes>
                         <supportedProjectType>jar</supportedProjectType>
