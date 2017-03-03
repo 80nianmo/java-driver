@@ -78,9 +78,7 @@ public class MappingConfigurationTransientTest extends CCMTestsSupport {
     @Test(groups = "short")
     public void should_ignore_property_if_declared_transient_in_mapper_configuration() {
         MappingConfiguration conf = MappingConfiguration.builder()
-                .withPropertyTransienceStrategy(DefaultPropertyTransienceStrategy.builder()
-                        .addTransientProperties("notAColumn")
-                        .build())
+                .withPropertyTransienceStrategy(new DefaultPropertyTransienceStrategy("notAColumn"))
                 .build();
         MappingManager mappingManager = new MappingManager(session(), conf);
         mappingManager.mapper(Foo3.class);

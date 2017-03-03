@@ -40,6 +40,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 class PropertyMapper {
 
+    private final Class<?> baseClass;
     private final String propertyName;
     final String alias;
     final String columnName;
@@ -54,14 +55,15 @@ class PropertyMapper {
     private final MappingConfiguration configuration;
 
     PropertyMapper(Class<?> baseClass, String propertyName, String alias, Field field, PropertyDescriptor property, MappingConfiguration configuration) {
+        this.baseClass = baseClass;
         this.propertyName = propertyName;
         this.alias = alias;
-        this.field = configuration.getPropertyAccessStrategy().isFieldAccessAllowed() ? field : null;
+        this.field = field;
         this.configuration = configuration;
-        getter = property != null && configuration.getPropertyAccessStrategy().isGetterSetterAccessAllowed()
+        getter = property != null
                 ? configuration.getPropertyAccessStrategy().locateGetter(baseClass, property)
                 : null;
-        setter = property != null && configuration.getPropertyAccessStrategy().isGetterSetterAccessAllowed()
+        setter = property != null
                 ? configuration.getPropertyAccessStrategy().locateSetter(baseClass, property)
                 : null;
         annotations = ReflectionUtils.scanPropertyAnnotations(field, getter);
@@ -89,11 +91,27 @@ class PropertyMapper {
     }
 
     Object getValue(Object entity) {
-        return configuration.getPropertyAccessStrategy().getValue(entity, propertyName, field, getter);
+        try {
+            // try getter first, if available, otherwise direct field access
+            if (getter != null && getter.isAccessible())
+                return getter.invoke(entity);
+            else
+                return field.get(entity);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to read property '" + propertyName + "' in " + entity.getClass(), e);
+        }
     }
 
     void setValue(Object entity, Object value) {
-        configuration.getPropertyAccessStrategy().setValue(entity, value, propertyName, field, setter);
+        try {
+            // try setter first, if available, otherwise direct field access
+            if (setter != null && setter.isAccessible())
+                setter.invoke(entity, value);
+            else
+                field.set(entity, value);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to write property '" + propertyName + "' in " + entity.getClass(), e);
+        }
     }
 
     boolean hasAnnotation(Class<? extends Annotation> annotationClass) {
@@ -115,7 +133,7 @@ class PropertyMapper {
 
     boolean isTransient() {
         return field == null && getter == null && setter == null
-                || configuration.getPropertyTransienceStrategy().isTransient(propertyName, field, getter, setter, annotations);
+                || configuration.getPropertyTransienceStrategy().isTransient(baseClass, propertyName, field, getter, setter, annotations);
     }
 
     boolean isPartitionKey() {

@@ -16,7 +16,6 @@
 package com.datastax.driver.mapping.config;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
@@ -24,25 +23,73 @@ import java.lang.reflect.Method;
  */
 public interface PropertyAccessStrategy {
 
-    /**
-     * Returns whether or not the given {@link Field} should
-     * be used when accessing its underlying property.
-     *
-     * @return {@code true} if the given field should be considered, {@code false} otherwise.
-     */
-    boolean isFieldAccessAllowed();
+    enum PropertyAccessMode {
+
+        /**
+         * Use field access exclusively; property getters and setters, even if available, will be ignored.
+         * <p/>
+         * Note that fields do not need to be public for this access mode to work;
+         * the mapper will try to access them via reflection if necessary.
+         */
+        FIELDS,
+
+        /**
+         * Use getters and setters exclusively; property fields, even if available, will be ignored.
+         */
+        GETTERS_AND_SETTERS,
+
+        /**
+         * Try getters and setters first, if available, then field access, as a last resort.
+         * This is de default access mode.
+         * <p/>
+         * Note that fields do not need to be public for this access mode to work;
+         * the mapper will try to access them via reflection if necessary.
+         */
+        BOTH;
+
+        /**
+         * Returns {@code true} if field access is allowed, {@code false} otherwise.
+         *
+         * @return {@code true} if field access is allowed, {@code false} otherwise.
+         */
+        public boolean isFieldAccessAllowed() {
+            return this == FIELDS || this == BOTH;
+        }
+
+        /**
+         * Returns {@code true} if getter and setter access is allowed, {@code false} otherwise.
+         *
+         * @return {@code true} if getter and setter access is allowed, {@code false} otherwise.
+         */
+        public boolean isGetterSetterAccessAllowed() {
+            return this == GETTERS_AND_SETTERS || this == BOTH;
+        }
+
+    }
 
     /**
-     * Returns whether or not the given {@link PropertyDescriptor} should
-     * be used when accessing its underlying property.
+     * Returns the {@link PropertyAccessMode} to use when reading or writing a property.
      *
-     * @return {@code true} if the given {@link PropertyDescriptor} should be considered, {@code false} otherwise.
+     * @return the {@link PropertyAccessMode} to use when reading or writing a property.
      */
-    boolean isGetterSetterAccessAllowed();
+    PropertyAccessMode getPropertyAccessMode();
 
     /**
-     * Locates a getter method for the given base class and given property.
+     * Locates a getter method for the given mapped class and given property.
+     * <p/>
      * If this method returns {@code null} then no getter will be used to access the given property.
+     * In this case, the property <em>must</em> have a corresponding readable field, otherwise
+     * the mapper will throw an {@link IllegalArgumentException} when attempting to map this property.
+     * <p/>
+     * This method is never called if the {@link #getPropertyAccessMode() access mode} for this strategy
+     * is set to {@link PropertyAccessMode#FIELDS FIELDS}.
+     * <p/>
+     * Most users should rely on the implementation provided in {@link DefaultPropertyAccessStrategy#locateGetter(Class, PropertyDescriptor)}.
+     * It is however possible to return any non-standard method, as long as it does
+     * not take parameters, and its return type is assignable to (and covariant with) the property's type.
+     * <p/>
+     * This might be particularly useful for boolean properties whose names are verbs, e.g. "{@code hasAccount}":
+     * one could then return the non-standard method {@code boolean hasAccount()} as its getter.
      *
      * @param mappedClass The mapped class; this is necessarily a class annotated with
      *                  either {@link com.datastax.driver.mapping.annotations.Table @Table} or
@@ -53,8 +100,18 @@ public interface PropertyAccessStrategy {
     Method locateGetter(Class<?> mappedClass, PropertyDescriptor property);
 
     /**
-     * Locates a setter method for the given base class and given property.
+     * Locates a setter method for the given mapped class and given property.
+     * <p/>
      * If this method returns {@code null} then no setter will be used to access the given property.
+     * In this case, the property <em>must</em> have a corresponding writable field, otherwise
+     * the mapper will throw an {@link IllegalArgumentException} when attempting to map this property.
+     * <p/>
+     * This method is never called if the {@link #getPropertyAccessMode() access mode} for this strategy
+     * is set to {@link PropertyAccessMode#FIELDS FIELDS}.
+     * <p/>
+     * Most users should rely on the implementation provided in {@link DefaultPropertyAccessStrategy#locateSetter(Class, PropertyDescriptor)}.
+     * It is however possible to return any non-standard method, as long as it accepts one single parameter type
+     * that is contravariant with the property's type.
      *
      * @param mappedClass The mapped class; this is necessarily a class annotated with
      *                  either {@link com.datastax.driver.mapping.annotations.Table @Table} or
@@ -63,32 +120,5 @@ public interface PropertyAccessStrategy {
      * @return The setter method for the given base class and given property, or {@code null} if no setter was found.
      */
     Method locateSetter(Class<?> mappedClass, PropertyDescriptor property);
-
-    /**
-     * Reads a property.
-     *
-     * @param entity       The instance to read the property from; never {@code null}.
-     * @param propertyName The property name, as inferred by the mapper; never {@code null}.
-     * @param field        The property field; may be {@code null}.
-     *                     May be {@code null}, but {@code field} and {@code getter} cannot be both {@code null}.
-     * @param getter       The property's getter method, as inferred by {@link #locateGetter(Class, PropertyDescriptor) this strategy}.
-     *                     May be {@code null}, but {@code field} and {@code getter} cannot be both {@code null}.
-     * @return The property value.
-     * @throws IllegalArgumentException if the property cannot be read.
-     */
-    Object getValue(Object entity, String propertyName, Field field, Method getter);
-
-    /**
-     * Writes a property.
-     *
-     * @param entity       The instance to read the property from; never {@code null}.
-     * @param propertyName The property name, as inferred by the mapper; never {@code null}.
-     * @param field        The property field; may be {@code null}.
-     *                     May be {@code null}, but {@code field} and {@code setter} cannot be both {@code null}.
-     * @param setter       The property's setter method, as inferred by {@link #locateSetter(Class, PropertyDescriptor) this strategy}.
-     *                     May be {@code null}, but {@code field} and {@code setter} cannot be both {@code null}.
-     * @throws IllegalArgumentException if the property cannot be written.
-     */
-    void setValue(Object entity, Object value, String propertyName, Field field, Method setter);
 
 }

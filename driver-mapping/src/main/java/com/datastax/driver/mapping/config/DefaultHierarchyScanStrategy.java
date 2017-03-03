@@ -26,64 +26,33 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * This strategy assumes that there exists a common ancestor
  * for all mapped classes in the application, and allows all its
  * descendants (optionally including itself) to be scanned for annotations.
- * <p/>
- * By default, the common ancestor is {@link Object}, which implies
- * that every ancestor of a mapped class, except {@code Object} itself,
- * will be scanned for annotations.
  */
 public class DefaultHierarchyScanStrategy implements HierarchyScanStrategy {
 
-    /**
-     * Returns a new {@link DefaultHierarchyScanStrategy.Builder} instance.
-     *
-     * @return a new {@link DefaultHierarchyScanStrategy.Builder} instance.
-     */
-    public static DefaultHierarchyScanStrategy.Builder builder() {
-        return new DefaultHierarchyScanStrategy.Builder();
-    }
-
-    /**
-     * Builder for {@link DefaultHierarchyScanStrategy} instances.
-     */
-    public static class Builder {
-
-        private Class<?> highestAncestor = Object.class;
-        private boolean includeHighestAncestor = false;
-
-        /**
-         * Sets the highest ancestor that will be scanned for mapping annotations.
-         * <p/>
-         * If this method is not called, the default is to scan up to {@code Object}, excluded (the equivalent of
-         * {@code withHighestAncestor(Object.class, false)}).
-         *
-         * @param highestAncestor The highest ancestor class to consider; cannot be {@code null}.
-         * @param included        Whether or not to include the highest ancestor itself.
-         */
-        public Builder withHighestAncestor(Class<?> highestAncestor, boolean included) {
-            checkNotNull(highestAncestor);
-            this.highestAncestor = highestAncestor;
-            this.includeHighestAncestor = included;
-            return this;
-        }
-
-        /**
-         * Builds a new instance of {@link DefaultHierarchyScanStrategy} with this builder's
-         * settings.
-         *
-         * @return a new instance of {@link DefaultHierarchyScanStrategy}
-         */
-        public DefaultHierarchyScanStrategy build() {
-            return new DefaultHierarchyScanStrategy(highestAncestor, includeHighestAncestor);
-        }
-    }
-
     private final Class<?> highestAncestor;
 
-    private final boolean includeHighestAncestor;
+    private final boolean included;
 
-    private DefaultHierarchyScanStrategy(Class<?> highestAncestor, boolean includeHighestAncestor) {
+    /**
+     * Creates a new instance with defaults:
+     * the common ancestor is {@link Object} excluded, which implies
+     * that every ancestor of a mapped class, except {@code Object} itself,
+     * will be scanned for annotations.
+     */
+    public DefaultHierarchyScanStrategy() {
+        this(Object.class, false);
+    }
+
+    /**
+     * Creates a new instance with the given highest common ancestor.
+     *
+     * @param highestAncestor The highest ancestor class to consider; cannot be {@code null}.
+     * @param included        Whether or not to include the highest ancestor itself.
+     */
+    public DefaultHierarchyScanStrategy(Class<?> highestAncestor, boolean included) {
+        checkNotNull(highestAncestor);
         this.highestAncestor = highestAncestor;
-        this.includeHighestAncestor = includeHighestAncestor;
+        this.included = included;
     }
 
     @Override
@@ -91,7 +60,7 @@ public class DefaultHierarchyScanStrategy implements HierarchyScanStrategy {
         List<Class<?>> classesToScan = new ArrayList<Class<?>>();
         Class<?> highestAncestor = this.highestAncestor;
         for (Class<?> clazz = mappedClass.getSuperclass(); clazz != null; clazz = clazz.getSuperclass()) {
-            if (!clazz.equals(highestAncestor) || includeHighestAncestor) {
+            if (!clazz.equals(highestAncestor) || included) {
                 classesToScan.add(clazz);
             }
             if (clazz.equals(highestAncestor)) {

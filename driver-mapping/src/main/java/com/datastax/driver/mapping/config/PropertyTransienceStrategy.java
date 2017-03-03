@@ -33,6 +33,9 @@ public interface PropertyTransienceStrategy {
      * Returns {@code true} if the given property is transient (i.e., non-mapped),
      * {@code false} otherwise.
      *
+     * @param mappedClass  The mapped class; this is necessarily a class annotated with
+     *                     either {@link com.datastax.driver.mapping.annotations.Table @Table} or
+     *                     {@link com.datastax.driver.mapping.annotations.UDT @UDT}.
      * @param propertyName The property name, as inferred by the mapper; never {@code null}.
      * @param field        The property field.
      *                     May be {@code null}, but {@code field}, {@code getter} and {@code setter} cannot be all {@code null}.
@@ -44,6 +47,6 @@ public interface PropertyTransienceStrategy {
      *                     The map will include all annotations found on the field, the getter and the setter methods.
      * @return {@code true} if the given property is transient (i.e., non-mapped), {@code false} otherwise.
      */
-    boolean isTransient(String propertyName, Field field, Method getter, Method setter, Map<Class<? extends Annotation>, Annotation> annotations);
+    boolean isTransient(Class<?> mappedClass, String propertyName, Field field, Method getter, Method setter, Map<Class<? extends Annotation>, Annotation> annotations);
 
 }

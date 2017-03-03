@@ -15,7 +15,7 @@
  */
 package com.datastax.driver.mapping;
 
-import com.datastax.driver.mapping.config.HierarchyScanStrategy;
+import com.datastax.driver.mapping.config.MappingConfiguration;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 
@@ -58,20 +58,26 @@ class ReflectionUtils {
     // for each key representing a property name,
     // value[0] contains a Field object, value[1] contains a PropertyDescriptor object;
     // they cannot be both null at the same time
-    static <T> Map<String, Object[]> scanFieldsAndProperties(Class<T> baseClass, HierarchyScanStrategy hierarchyScanStrategy) {
+    static <T> Map<String, Object[]> scanFieldsAndProperties(Class<T> baseClass, MappingConfiguration configuration) {
         Map<String, Object[]> fieldsAndProperties = new HashMap<String, Object[]>();
         List<Class<?>> classesToScan = Lists.<Class<?>>newArrayList(baseClass);
-        classesToScan.addAll(hierarchyScanStrategy.filterClassHierarchy(baseClass));
-        Map<String, Field> fields = scanFields(classesToScan);
-        for (Map.Entry<String, Field> entry : fields.entrySet()) {
-            fieldsAndProperties.put(entry.getKey(), new Object[]{entry.getValue(), null});
+        classesToScan.addAll(configuration.getHierarchyScanStrategy().filterClassHierarchy(baseClass));
+        // JAVA-1310: Make the annotation parsing logic configurable at mapper level
+        // (only fields, only getters, or both)
+        if (configuration.getPropertyAccessStrategy().getPropertyAccessMode().isFieldAccessAllowed()) {
+            Map<String, Field> fields = scanFields(classesToScan);
+            for (Map.Entry<String, Field> entry : fields.entrySet()) {
+                fieldsAndProperties.put(entry.getKey(), new Object[]{entry.getValue(), null});
+            }
         }
-        Map<String, PropertyDescriptor> properties = scanProperties(classesToScan);
-        for (Map.Entry<String, PropertyDescriptor> entry : properties.entrySet()) {
-            Object[] value = fieldsAndProperties.get(entry.getKey());
-            if (value == null)
-                fieldsAndProperties.put(entry.getKey(), new Object[]{null, entry.getValue()});
-            else value[1] = entry.getValue();
+        if (configuration.getPropertyAccessStrategy().getPropertyAccessMode().isGetterSetterAccessAllowed()) {
+            Map<String, PropertyDescriptor> properties = scanProperties(classesToScan);
+            for (Map.Entry<String, PropertyDescriptor> entry : properties.entrySet()) {
+                Object[] value = fieldsAndProperties.get(entry.getKey());
+                if (value == null)
+                    fieldsAndProperties.put(entry.getKey(), new Object[]{null, entry.getValue()});
+                else value[1] = entry.getValue();
+            }
         }
         return fieldsAndProperties;
     }

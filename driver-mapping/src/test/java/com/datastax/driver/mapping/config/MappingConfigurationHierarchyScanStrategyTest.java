@@ -75,9 +75,7 @@ public class MappingConfigurationHierarchyScanStrategyTest extends CCMTestsSuppo
     @Test(groups = "short")
     public void should_inherit_annotations_up_to_highest_ancestor_exluded() {
         MappingConfiguration conf = MappingConfiguration.builder()
-                .withHierarchyScanStrategy(DefaultHierarchyScanStrategy.builder()
-                        .withHighestAncestor(GrandParent2.class, false)
-                        .build())
+                .withHierarchyScanStrategy(new DefaultHierarchyScanStrategy(GrandParent2.class, false))
                 .build();
         MappingManager mappingManager = new MappingManager(session(), conf);
         Mapper<Child2> mapper = mappingManager.mapper(Child2.class);
@@ -87,9 +85,7 @@ public class MappingConfigurationHierarchyScanStrategyTest extends CCMTestsSuppo
     @Test(groups = "short")
     public void should_inherit_annotations_up_to_highest_ancestor_included() {
         MappingConfiguration conf = MappingConfiguration.builder()
-                .withHierarchyScanStrategy(DefaultHierarchyScanStrategy.builder()
-                        .withHighestAncestor(Parent2.class, true)
-                        .build())
+                .withHierarchyScanStrategy(new DefaultHierarchyScanStrategy(Parent2.class, true))
                 .build();
         MappingManager mappingManager = new MappingManager(session(), conf);
         Mapper<Child2> mapper = mappingManager.mapper(Child2.class);

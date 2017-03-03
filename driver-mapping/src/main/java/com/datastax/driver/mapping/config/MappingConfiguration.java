@@ -43,9 +43,9 @@ public class MappingConfiguration {
 
         private PropertyAccessStrategy propertyAccessStrategy = new DefaultPropertyAccessStrategy();
 
-        private PropertyTransienceStrategy propertyTransienceStrategy = DefaultPropertyTransienceStrategy.builder().build();
+        private PropertyTransienceStrategy propertyTransienceStrategy = new DefaultPropertyTransienceStrategy();
 
-        private HierarchyScanStrategy hierarchyScanStrategy = DefaultHierarchyScanStrategy.builder().build();
+        private HierarchyScanStrategy hierarchyScanStrategy = new DefaultHierarchyScanStrategy();
 
         /**
          * Sets the {@link PropertyAccessStrategy property access strategy} to use.

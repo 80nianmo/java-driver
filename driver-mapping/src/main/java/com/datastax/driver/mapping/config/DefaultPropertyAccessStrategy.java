@@ -16,28 +16,23 @@
 package com.datastax.driver.mapping.config;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * The default access strategy used by the mapper.
  * <p/>
- * This strategy tries getter/setter access first, if these are present,
- * then field access as a last resort.
+ * This strategy tries getters and setters first, if available,
+ * then field access, as a last resort.
+ * <p/>
+ * It recognizes standard getter and setter methods (as defined by the Java Beans specification),
+ * and also "relaxed" setter methods, i.e., setter methods whose return type are not {@code void}.
  */
 public class DefaultPropertyAccessStrategy implements PropertyAccessStrategy {
 
     @Override
-    public boolean isFieldAccessAllowed() {
-        return true;
-    }
-
-    @Override
-    public boolean isGetterSetterAccessAllowed() {
-        return true;
+    public PropertyAccessMode getPropertyAccessMode() {
+        return PropertyAccessMode.BOTH;
     }
 
     @Override
@@ -60,34 +55,6 @@ public class DefaultPropertyAccessStrategy implements PropertyAccessStrategy {
             }
         }
         return setter;
-    }
-
-    @Override
-    public Object getValue(Object entity, String propertyName, Field field, Method getter) {
-        try {
-            // try getter first, if available, otherwise direct field access
-            if (getter != null && getter.isAccessible()) {
-                return getter.invoke(entity);
-            } else {
-                return checkNotNull(field).get(entity);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unable to read property '" + propertyName + "' in " + entity.getClass(), e);
-        }
-    }
-
-    @Override
-    public void setValue(Object entity, Object value, String propertyName, Field field, Method setter) {
-        try {
-            // try setter first, if available, otherwise direct field access
-            if (setter != null && setter.isAccessible()) {
-                setter.invoke(entity, value);
-            } else {
-                checkNotNull(field).set(entity, value);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unable to write property '" + propertyName + "' in " + entity.getClass(), e);
-        }
     }
 
 }

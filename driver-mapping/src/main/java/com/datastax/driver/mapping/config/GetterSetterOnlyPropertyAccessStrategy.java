@@ -21,8 +21,8 @@ package com.datastax.driver.mapping.config;
 public class GetterSetterOnlyPropertyAccessStrategy extends DefaultPropertyAccessStrategy {
 
     @Override
-    public boolean isFieldAccessAllowed() {
-        return false;
+    public PropertyAccessMode getPropertyAccessMode() {
+        return PropertyAccessMode.GETTERS_AND_SETTERS;
     }
 
 }

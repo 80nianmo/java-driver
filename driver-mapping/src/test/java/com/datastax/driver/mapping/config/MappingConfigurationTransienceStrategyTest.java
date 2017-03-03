@@ -39,7 +39,7 @@ public class MappingConfigurationTransienceStrategyTest extends CCMTestsSupport 
     @Test(groups = "short")
     public void should_map_only_non_transient() {
         MappingConfiguration conf = MappingConfiguration.builder()
-                .withPropertyTransienceStrategy(DefaultPropertyTransienceStrategy.builder().build())
+                .withPropertyTransienceStrategy(new DefaultPropertyTransienceStrategy())
                 .build();
         MappingManager mappingManager = new MappingManager(session(), conf);
         Mapper<Foo1> mapper = mappingManager.mapper(Foo1.class);
