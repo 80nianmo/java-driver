@@ -55,28 +55,34 @@ class ReflectionUtils {
         }
     }
 
-    // for each key representing a property name,
-    // value[0] contains a Field object, value[1] contains a PropertyDescriptor object;
-    // they cannot be both null at the same time
-    static <T> Map<String, Object[]> scanFieldsAndProperties(Class<T> baseClass, MappingConfiguration configuration) {
+    // For each key representing a property name,
+    // value[0] contains a Field object,
+    // value[1] contains a getter Method,
+    // value[2] contains a setter Method;
+    // they cannot be all null at the same time
+    static Map<String, Object[]> scanFieldsAndProperties(Class<?> baseClass, MappingConfiguration configuration) {
         Map<String, Object[]> fieldsAndProperties = new HashMap<String, Object[]>();
         List<Class<?>> classesToScan = Lists.<Class<?>>newArrayList(baseClass);
         classesToScan.addAll(configuration.getHierarchyScanStrategy().filterClassHierarchy(baseClass));
-        // JAVA-1310: Make the annotation parsing logic configurable at mapper level
-        // (only fields, only getters, or both)
         if (configuration.getPropertyAccessStrategy().getPropertyAccessMode().isFieldAccessAllowed()) {
             Map<String, Field> fields = scanFields(classesToScan);
             for (Map.Entry<String, Field> entry : fields.entrySet()) {
-                fieldsAndProperties.put(entry.getKey(), new Object[]{entry.getValue(), null});
+                fieldsAndProperties.put(entry.getKey(), new Object[]{entry.getValue(), null, null});
             }
         }
         if (configuration.getPropertyAccessStrategy().getPropertyAccessMode().isGetterSetterAccessAllowed()) {
             Map<String, PropertyDescriptor> properties = scanProperties(classesToScan);
             for (Map.Entry<String, PropertyDescriptor> entry : properties.entrySet()) {
+                PropertyDescriptor property = entry.getValue();
+                Method getter = configuration.getPropertyAccessStrategy().locateGetter(baseClass, property);
+                Method setter = configuration.getPropertyAccessStrategy().locateSetter(baseClass, property);
                 Object[] value = fieldsAndProperties.get(entry.getKey());
-                if (value == null)
-                    fieldsAndProperties.put(entry.getKey(), new Object[]{null, entry.getValue()});
-                else value[1] = entry.getValue();
+                if (value != null) {
+                    value[1] = getter;
+                    value[2] = setter;
+                } else if (getter != null || setter != null) {
+                    fieldsAndProperties.put(entry.getKey(), new Object[]{null, getter, setter});
+                }
             }
         }
         return fieldsAndProperties;

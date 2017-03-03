@@ -23,7 +23,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.TypeToken;
 
-import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -117,23 +116,23 @@ class AnnotationParser {
 
             String propertyName = entry.getKey();
             java.lang.reflect.Field field = (java.lang.reflect.Field) entry.getValue()[0];
-            PropertyDescriptor property = (PropertyDescriptor) entry.getValue()[1];
+            Method getter = (Method) entry.getValue()[1];
+            Method setter = (Method) entry.getValue()[2];
+            Map<Class<? extends Annotation>, Annotation> annotations = ReflectionUtils.scanPropertyAnnotations(field, getter);
+
+            if (configuration.getPropertyTransienceStrategy().isTransient(entityClass, propertyName, field, getter, setter, annotations))
+                continue;
+
             String alias = (columnCounter != null)
                     ? "col" + columnCounter.incrementAndGet()
                     : null;
 
-            PropertyMapper propertyMapper = new PropertyMapper(entityClass, propertyName, alias, field, property, configuration);
+            PropertyMapper propertyMapper = new PropertyMapper(propertyName, alias, field, getter, setter, annotations);
 
             if (mappingManager.isCassandraV1 && propertyMapper.isComputed())
                 throw new UnsupportedOperationException("Computed properties are not supported with native protocol v1");
 
             AnnotationChecks.validateAnnotations(propertyMapper, VALID_COLUMN_ANNOTATIONS);
-
-            if (propertyMapper.isTransient())
-                continue;
-
-            assert propertyMapper.javaType != null;
-            assert propertyMapper.columnName != null;
 
             if (!propertyMapper.isComputed() && tableMetadata.getColumn(propertyMapper.columnName) == null)
                 throw new IllegalArgumentException(String.format("Column %s does not exist in table %s.%s",
@@ -194,17 +193,16 @@ class AnnotationParser {
 
             String propertyName = entry.getKey();
             java.lang.reflect.Field field = (java.lang.reflect.Field) entry.getValue()[0];
-            PropertyDescriptor property = (PropertyDescriptor) entry.getValue()[1];
+            Method getter = (Method) entry.getValue()[1];
+            Method setter = (Method) entry.getValue()[2];
+            Map<Class<? extends Annotation>, Annotation> annotations = ReflectionUtils.scanPropertyAnnotations(field, getter);
 
-            PropertyMapper propertyMapper = new PropertyMapper(udtClass, propertyName, null, field, property, configuration);
-
-            AnnotationChecks.validateAnnotations(propertyMapper, VALID_FIELD_ANNOTATIONS);
-
-            if (propertyMapper.isTransient())
+            if (configuration.getPropertyTransienceStrategy().isTransient(udtClass, propertyName, field, getter, setter, annotations))
                 continue;
 
-            assert propertyMapper.javaType != null;
-            assert propertyMapper.columnName != null;
+            PropertyMapper propertyMapper = new PropertyMapper(propertyName, null, field, getter, setter, annotations);
+
+            AnnotationChecks.validateAnnotations(propertyMapper, VALID_FIELD_ANNOTATIONS);
 
             if (!userType.contains(propertyMapper.columnName))
                 throw new IllegalArgumentException(String.format("Field %s does not exist in type %s.%s",
