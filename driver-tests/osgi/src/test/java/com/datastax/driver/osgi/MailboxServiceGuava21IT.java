@@ -18,7 +18,9 @@ package com.datastax.driver.osgi;
 import com.datastax.driver.osgi.api.MailboxException;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.options.MavenArtifactProvisionOption;
 import org.ops4j.pax.exam.testng.listener.PaxExam;
+import org.testng.SkipException;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -30,10 +32,18 @@ public class MailboxServiceGuava21IT extends MailboxServiceTests {
 
     @Configuration
     public Option[] guava21Config() {
+        MavenArtifactProvisionOption guavaBundle = guavaBundle();
+        String javaVersion = System.getProperty("java.version");
+        // Only bring in 21.0 if java version >= 1.8.  If this is not done the framework
+        // will fail to load for < 1.8 and we plan on skipping the test anyways.
+        if (javaVersion.compareTo("1.8") >= 0) {
+            guavaBundle = guavaBundle.version("21.0");
+        }
+
         return options(
                 defaultOptions(),
                 nettyBundles(),
-                guavaBundle().version("21.0"),
+                guavaBundle,
                 driverBundle(),
                 extrasBundle(),
                 mappingBundle(),
@@ -52,6 +62,10 @@ public class MailboxServiceGuava21IT extends MailboxServiceTests {
      */
     @Test(groups = "short")
     public void test_guava_21() throws MailboxException {
+        String javaVersion = System.getProperty("java.version");
+        if (javaVersion.compareTo("1.8") < 0) {
+            throw new SkipException("Guava 21 requires Java 1.8");
+        }
         checkService();
     }
 }
